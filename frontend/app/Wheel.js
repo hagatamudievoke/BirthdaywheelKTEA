@@ -61,14 +61,14 @@ export default function Wheel({ employeeNumber, onPrize, onError }) {
   const innerR = 38;
 
   const COLORS = [
-    ['#0998aa', '#31bdd0'],
-    ['#0f7f95', '#1ca4bb'],
-    ['#2f8d9f', '#5cadbc'],
-    ['#0b6f82', '#1690a7'],
-    ['#1c9aae', '#56bac9'],
-    ['#0e768a', '#2a9db2'],
-    ['#3f9fb0', '#73bac6'],
-    ['#167b8f', '#42a6b8'],
+    ['#ff6b6b', '#ff9999'],
+    ['#ffd93d', '#ffe88a'],
+    ['#6bcb77', '#98e0a0'],
+    ['#4d96ff', '#7ab3ff'],
+    ['#c77dff', '#dba4ff'],
+    ['#ff9f43', '#ffbf76'],
+    ['#00d2d3', '#54a0ff'],
+    ['#ff6b9d', '#ff9fcb'],
   ];
 
   const slices = prizes.map((prize, i) => {

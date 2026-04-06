@@ -2,8 +2,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './admin.module.css';
 import { apiUrl } from '../api';
+import {
+  SidebarLogoIcon,
+  WinnersIcon,
+  TempDobIcon,
+  PrizesIcon,
+  MonthsIcon,
+  OptionsIcon,
+  AdminsIcon,
+  AdminShieldIcon,
+} from './AdminIcons';
 
-const TABS = ['Winners', 'Temporary DOBs', 'Prizes', 'Birthday Months', 'Options', 'Admins'];
+const TABS = [
+  { id: 'Winners',         label: 'Winners',   icon: WinnersIcon },
+  { id: 'Temporary DOBs',  label: 'Temp DOBs', icon: TempDobIcon },
+  { id: 'Prizes',          label: 'Prizes',    icon: PrizesIcon },
+  { id: 'Birthday Months', label: 'Months',    icon: MonthsIcon },
+  { id: 'Options',         label: 'Options',   icon: OptionsIcon },
+  { id: 'Admins',          label: 'Admins',    icon: AdminsIcon },
+];
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -98,7 +115,7 @@ function WinnersTab() {
         </div>
       </div>
 
-      <div className={styles.filterBar}>
+      <div className={`${styles.filterBar} ${styles.winnersFilterBar}`}>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Played Date From</label>
           <input className={styles.filterInput} type="date" value={filters.from}
@@ -120,23 +137,35 @@ function WinnersTab() {
         </div>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Last Name</label>
-          <input className={styles.filterInput} placeholder="Last name…" value={filters.lastName}
-            onChange={e => setFilters(f => ({ ...f, lastName: e.target.value }))} />
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} placeholder="Last name…" value={filters.lastName}
+              onChange={e => setFilters(f => ({ ...f, lastName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.lastName} onClick={() => setFilters(f => ({ ...f, lastName: '' }))}>CLEAR</button>
+          </div>
         </div>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>First Name</label>
-          <input className={styles.filterInput} placeholder="First name…" value={filters.firstName}
-            onChange={e => setFilters(f => ({ ...f, firstName: e.target.value }))} />
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} placeholder="First name…" value={filters.firstName}
+              onChange={e => setFilters(f => ({ ...f, firstName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.firstName} onClick={() => setFilters(f => ({ ...f, firstName: '' }))}>CLEAR</button>
+          </div>
         </div>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Employee #</label>
-          <input className={styles.filterInput} placeholder="Emp #…" value={filters.employeeNumber}
-            onChange={e => setFilters(f => ({ ...f, employeeNumber: e.target.value }))} />
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} placeholder="Emp #…" value={filters.employeeNumber}
+              onChange={e => setFilters(f => ({ ...f, employeeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.employeeNumber} onClick={() => setFilters(f => ({ ...f, employeeNumber: '' }))}>CLEAR</button>
+          </div>
         </div>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Badge #</label>
-          <input className={styles.filterInput} placeholder="Badge #…" value={filters.badgeNumber}
-            onChange={e => setFilters(f => ({ ...f, badgeNumber: e.target.value }))} />
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} placeholder="Badge #…" value={filters.badgeNumber}
+              onChange={e => setFilters(f => ({ ...f, badgeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.badgeNumber} onClick={() => setFilters(f => ({ ...f, badgeNumber: '' }))}>CLEAR</button>
+          </div>
         </div>
         <div className={styles.filterActions}>
           <button className={styles.btnPrimary} onClick={fetchWinners}>Search</button>
@@ -204,23 +233,53 @@ function WinnersTab() {
 function TempDobsTab() {
   const [entries, setEntries] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ employeeNumber: '', employeeName: '', originalMonth: '', tempMonth: '', reason: '' });
+  const [form, setForm] = useState({ employeeNumber: '', firstName: '', lastName: '', badgeNumber: '', originalMonth: '', tempMonth: '', reason: '' });
+  const [filters, setFilters] = useState({ lastName: '', firstName: '', employeeNumber: '', badgeNumber: '' });
+  const [appliedFilters, setAppliedFilters] = useState({ lastName: '', firstName: '', employeeNumber: '', badgeNumber: '' });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTempDobs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/temp-dobs'));
+      const data = await res.json();
+      setEntries(data.tempDobs || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetch(apiUrl('/api/admin/temp-dobs')).then(r => r.json()).then(d => setEntries(d.tempDobs || []));
-  }, []);
+    fetchTempDobs();
+  }, [fetchTempDobs]);
+
+  const filteredEntries = entries.filter((entry) => {
+    const lastName = (entry.lastName || '').toLowerCase();
+    const firstName = (entry.firstName || '').toLowerCase();
+    const employeeNumber = String(entry.employeeNumber || '');
+    const badgeNumber = String(entry.badgeNumber || '');
+
+    if (appliedFilters.lastName && !lastName.includes(appliedFilters.lastName.toLowerCase())) return false;
+    if (appliedFilters.firstName && !firstName.includes(appliedFilters.firstName.toLowerCase())) return false;
+    if (appliedFilters.employeeNumber && !employeeNumber.includes(appliedFilters.employeeNumber)) return false;
+    if (appliedFilters.badgeNumber && !badgeNumber.includes(appliedFilters.badgeNumber)) return false;
+    return true;
+  });
 
   const handleAdd = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
+      const employeeName = `${form.firstName} ${form.lastName}`.trim();
       const res = await fetch(apiUrl('/api/admin/temp-dobs'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, employeeName }),
       });
       const entry = await res.json();
       setEntries(prev => [...prev, entry]);
-      setForm({ employeeNumber: '', employeeName: '', originalMonth: '', tempMonth: '', reason: '' });
+      setForm({ employeeNumber: '', firstName: '', lastName: '', badgeNumber: '', originalMonth: '', tempMonth: '', reason: '' });
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -235,9 +294,54 @@ function TempDobsTab() {
   return (
     <div>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Temporary DOBs</h2>
-        <button className={styles.btnPrimary} onClick={() => setShowForm(v => !v)}>+ Add Temp DOB</button>
+        <h2 className={styles.sectionTitle}>NQ Birthday Wheel Temporary Date of Births</h2>
+        <button className={styles.btnPrimary} onClick={() => setShowForm(v => !v)}>+ New Temporary DOB</button>
       </div>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Last Name</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.lastName} onChange={e => setFilters(f => ({ ...f, lastName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.lastName} onClick={() => setFilters(f => ({ ...f, lastName: '' }))}>CLEAR</button>
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>First Name</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.firstName} onChange={e => setFilters(f => ({ ...f, firstName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.firstName} onClick={() => setFilters(f => ({ ...f, firstName: '' }))}>CLEAR</button>
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Employee #</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.employeeNumber} onChange={e => setFilters(f => ({ ...f, employeeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.employeeNumber} onClick={() => setFilters(f => ({ ...f, employeeNumber: '' }))}>CLEAR</button>
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Badge #</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.badgeNumber} onChange={e => setFilters(f => ({ ...f, badgeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.badgeNumber} onClick={() => setFilters(f => ({ ...f, badgeNumber: '' }))}>CLEAR</button>
+          </div>
+        </div>
+
+        <div className={styles.filterActions}>
+          <button className={styles.btnPrimary} onClick={() => setAppliedFilters({ ...filters })}>Search</button>
+          <button className={styles.btnOutline} onClick={() => {
+            const reset = { lastName: '', firstName: '', employeeNumber: '', badgeNumber: '' };
+            setFilters(reset);
+            setAppliedFilters(reset);
+          }}>Clear</button>
+        </div>
+      </div>
+
+      <p className={styles.resultCount}>({filteredEntries.length} temp found)</p>
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleAdd}>
@@ -248,12 +352,22 @@ function TempDobsTab() {
                 onChange={e => setForm(f => ({ ...f, employeeNumber: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Employee Name</label>
-              <input className={styles.formInput} value={form.employeeName}
-                onChange={e => setForm(f => ({ ...f, employeeName: e.target.value }))} />
+              <label className={styles.formLabel}>Last Name</label>
+              <input className={styles.formInput} value={form.lastName}
+                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Original Month</label>
+              <label className={styles.formLabel}>First Name</label>
+              <input className={styles.formInput} value={form.firstName}
+                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Badge #</label>
+              <input className={styles.formInput} value={form.badgeNumber}
+                onChange={e => setForm(f => ({ ...f, badgeNumber: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>DOB Month</label>
               <select className={styles.formInput} value={form.originalMonth}
                 onChange={e => setForm(f => ({ ...f, originalMonth: e.target.value }))}>
                 <option value="">— Select —</option>
@@ -285,22 +399,25 @@ function TempDobsTab() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Employee #</th><th>Employee Name</th><th>Original Month</th>
-              <th>Temp Month</th><th>Reason</th><th>Created</th><th>Actions</th>
+              <th>Last Name</th><th>First Name</th><th>Employee #</th>
+              <th>Badge #</th><th>DOB Month</th><th>Temp DOB Month</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 && (
+            {loading && (
+              <tr><td colSpan={7} className={styles.emptyState}>Loading…</td></tr>
+            )}
+            {!loading && filteredEntries.length === 0 && (
               <tr><td colSpan={7} className={styles.emptyState}>No temporary DOBs configured.</td></tr>
             )}
-            {entries.map(e => (
+            {!loading && filteredEntries.map(e => (
               <tr key={e.id}>
+                <td>{e.lastName || '—'}</td>
+                <td>{e.firstName || '—'}</td>
                 <td>{e.employeeNumber}</td>
-                <td>{e.employeeName}</td>
-                <td>{e.originalMonth}</td>
+                <td>{e.badgeNumber || '—'}</td>
+                <td>{e.originalMonth || '—'}</td>
                 <td>{e.tempMonth}</td>
-                <td>{e.reason}</td>
-                <td>{formatDate(e.createdAt)}</td>
                 <td><button className={styles.btnDanger} onClick={() => handleDelete(e.id)}>Remove</button></td>
               </tr>
             ))}
@@ -315,27 +432,37 @@ function TempDobsTab() {
 function PrizesTab() {
   const [prizes, setPrizes] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', value: '', isJackpot: false });
+  const [form, setForm] = useState({ name: '', value: '', isJackpot: false, year: String(new Date().getFullYear()) });
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [yearFilter, setYearFilter] = useState('All');
+  const [appliedYear, setAppliedYear] = useState('All');
 
   const fetchPrizes = () => {
     fetch(apiUrl('/api/admin/prizes')).then(r => r.json()).then(d => setPrizes(d.prizes || []));
   };
   useEffect(() => { fetchPrizes(); }, []);
 
+  const availableYears = ['All', ...new Set(prizes.map(p => String(p.year || new Date().getFullYear()))).values()];
+  const filteredPrizes = prizes.filter((prize) => appliedYear === 'All' || String(prize.year || new Date().getFullYear()) === appliedYear);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const body = { name: form.name, value: parseFloat(form.value) || 0, isJackpot: form.isJackpot };
+      const body = {
+        name: form.name,
+        value: parseFloat(form.value) || 0,
+        isJackpot: form.isJackpot,
+        year: parseInt(form.year, 10) || new Date().getFullYear(),
+      };
       if (editId) {
         await fetch(apiUrl('/api/admin/prizes/' + editId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       } else {
         await fetch(apiUrl('/api/admin/prizes'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       }
       fetchPrizes();
-      setForm({ name: '', value: '', isJackpot: false });
+      setForm({ name: '', value: '', isJackpot: false, year: String(new Date().getFullYear()) });
       setEditId(null);
       setShowForm(false);
     } finally {
@@ -344,7 +471,7 @@ function PrizesTab() {
   };
 
   const handleEdit = (p) => {
-    setForm({ name: p.name, value: String(p.value), isJackpot: p.isJackpot });
+    setForm({ name: p.name, value: String(p.value), isJackpot: p.isJackpot, year: String(p.year || new Date().getFullYear()) });
     setEditId(p.id);
     setShowForm(true);
   };
@@ -357,15 +484,34 @@ function PrizesTab() {
   return (
     <div>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Prizes</h2>
-        <button className={styles.btnPrimary} onClick={() => { setShowForm(v => !v); setEditId(null); setForm({ name: '', value: '', isJackpot: false }); }}>
-          + Add Prize
+        <h2 className={styles.sectionTitle}>NQ Birthday Wheel Prizes</h2>
+        <button className={styles.btnPrimary} onClick={() => { setShowForm(v => !v); setEditId(null); setForm({ name: '', value: '', isJackpot: false, year: String(new Date().getFullYear()) }); }}>
+          {showForm ? 'Close' : 'Set Prizes'}
         </button>
       </div>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Prize Year</label>
+          <select className={styles.filterInput} value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
+            {availableYears.map(year => <option key={year}>{year}</option>)}
+          </select>
+        </div>
+        <div className={styles.filterActions}>
+          <button className={styles.btnPrimary} onClick={() => setAppliedYear(yearFilter)}>Search</button>
+        </div>
+      </div>
+
+      <p className={styles.resultCount}>({filteredPrizes.length} prizes found)</p>
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleSubmit}>
           <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Prize Year</label>
+              <input className={styles.formInput} type="number" value={form.year}
+                onChange={e => setForm(f => ({ ...f, year: e.target.value }))} />
+            </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Prize Name *</label>
               <input required className={styles.formInput} value={form.name}
@@ -394,21 +540,22 @@ function PrizesTab() {
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
-            <tr><th>#</th><th>Prize Name</th><th>Value</th><th>Jackpot</th><th>Actions</th></tr>
+            <tr><th>Year</th><th>Prizes</th><th>Values</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {prizes.length === 0 && (
-              <tr><td colSpan={5} className={styles.emptyState}>No prizes configured.</td></tr>
+            {filteredPrizes.length === 0 && (
+              <tr><td colSpan={4} className={styles.emptyState}>No prizes configured.</td></tr>
             )}
-            {prizes.map((p, i) => (
+            {filteredPrizes.map((p) => (
               <tr key={p.id}>
-                <td>{i + 1}</td>
+                <td>{p.year || new Date().getFullYear()}</td>
                 <td className={p.isJackpot ? styles.jackpot : ''}>{p.name}</td>
                 <td>{p.value > 0 ? `$${p.value}` : '—'}</td>
-                <td>{p.isJackpot ? '✔ Yes' : 'No'}</td>
-                <td style={{ display: 'flex', gap: 8 }}>
-                  <button className={styles.btnSmall} onClick={() => handleEdit(p)}>Edit</button>
-                  <button className={styles.btnDanger} onClick={() => handleDelete(p.id)}>Delete</button>
+                <td>
+                  <div className={styles.rowActionsInline}>
+                    <button className={styles.btnSmall} onClick={() => handleEdit(p)}>Edit</button>
+                    <button className={styles.btnDanger} onClick={() => handleDelete(p.id)}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -422,10 +569,22 @@ function PrizesTab() {
 // ── Birthday Months Tab ───────────────────────────────────────────────────────
 function BirthdayMonthsTab() {
   const [months, setMonths] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [members, setMembers] = useState([]);
+  const [memberTotal, setMemberTotal] = useState(0);
 
   useEffect(() => {
     fetch(apiUrl('/api/admin/birthday-months')).then(r => r.json()).then(d => setMonths(d.birthdayMonths || []));
   }, []);
+
+  useEffect(() => {
+    fetch(apiUrl('/api/admin/birthday-month-members?month=' + selectedMonth))
+      .then(r => r.json())
+      .then(d => {
+        setMembers(d.members || []);
+        setMemberTotal(d.total || 0);
+      });
+  }, [selectedMonth]);
 
   const handleToggle = async (month, active) => {
     await fetch(apiUrl('/api/admin/birthday-months/' + month), {
@@ -437,9 +596,47 @@ function BirthdayMonthsTab() {
   return (
     <div>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Birthday Months</h2>
-        <p style={{ fontSize: 13, color: '#5a8290' }}>Toggle months to enable or disable spinning for that month.</p>
+        <h2 className={styles.sectionTitle}>NQ Birthday Wheel: Birthday Months</h2>
+        <button className={styles.btnOutline} onClick={() => window.print()}>Print List</button>
       </div>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Birthday Month</label>
+          <select className={styles.filterInput} value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value, 10))}>
+            {months.map(m => <option key={m.month} value={m.month}>{m.name}</option>)}
+          </select>
+        </div>
+        <div className={styles.filterActions}>
+          <button className={styles.btnPrimary} onClick={() => setSelectedMonth(selectedMonth)}>Search</button>
+        </div>
+      </div>
+
+      <p className={styles.resultCount}>({memberTotal} birthdays found)</p>
+
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr><th>Last Name</th><th>First Name</th><th>Employee #</th><th>Badge #</th><th>Prize</th><th>Signature</th></tr>
+          </thead>
+          <tbody>
+            {members.length === 0 && (
+              <tr><td colSpan={6} className={styles.emptyState}>No team members found for this month.</td></tr>
+            )}
+            {members.map(member => (
+              <tr key={member.id}>
+                <td>{member.lastName}</td>
+                <td>{member.firstName}</td>
+                <td>{member.employeeNumber}</td>
+                <td>{member.badgeNumber}</td>
+                <td>{member.prize || '—'}</td>
+                <td><span className={styles.signatureLine} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div className={styles.monthsGrid}>
         {months.map(m => (
           <div key={m.month} className={styles.monthCard}>
@@ -487,32 +684,33 @@ function OptionsTab() {
     <div>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Options</h2>
-        {saved && <span style={{ color: '#1a6630', fontWeight: 600, fontSize: 13 }}>✔ Saved successfully</span>}
+        <div className={styles.headerActions}>
+          <button className={styles.btnOutline} type="button" onClick={() => window.open('https://github.com/hagatamudievoke/BirthdaywheelKTEA', '_blank', 'noopener,noreferrer')}>Documentation</button>
+          {saved && <span style={{ color: '#1a6630', fontWeight: 600, fontSize: 13 }}>✔ Saved successfully</span>}
+        </div>
       </div>
       <form onSubmit={handleSave}>
-        <div className={styles.optionsGrid}>
-          <div className={styles.optionCard}>
-            <div className={styles.optionLabel}>Site Name</div>
-            <input className={styles.formInput} value={opts.siteName}
-              onChange={e => setOpts(o => ({ ...o, siteName: e.target.value }))} />
+        <div className={styles.optionPanel}>
+          <div className={styles.optionRow}>
+            <div className={styles.optionLabelWide}>Suspend App</div>
+            <select className={styles.optionSelect} value={opts.suspendApp ? 'Yes' : 'No'} onChange={e => setOpts(o => ({ ...o, suspendApp: e.target.value === 'Yes' }))}>
+              <option>No</option>
+              <option>Yes</option>
+            </select>
           </div>
-          <div className={styles.optionCard}>
-            <div className={styles.optionLabel}>Max Spins Per Month</div>
-            <input type="number" min="1" className={styles.formInput} value={opts.maxSpinsPerMonth}
-              onChange={e => setOpts(o => ({ ...o, maxSpinsPerMonth: parseInt(e.target.value) || 1 }))} />
+
+          <div className={styles.optionRowTop}>
+            <div className={styles.optionLabelWide}>Suspension Message:</div>
+            <textarea
+              className={styles.messageArea}
+              value={opts.suspensionMessage || ''}
+              onChange={e => setOpts(o => ({ ...o, suspensionMessage: e.target.value }))}
+            />
           </div>
-          <div className={styles.optionCard}>
-            <div className={styles.optionLabel}>Auto Pickup Days</div>
-            <input type="number" min="1" className={styles.formInput} value={opts.autoPickupDays}
-              onChange={e => setOpts(o => ({ ...o, autoPickupDays: parseInt(e.target.value) || 30 }))} />
-          </div>
-          <div className={styles.optionCard}>
-            <div className={styles.optionLabel}>Allow Temporary DOB</div>
-            <label className={styles.checkboxLabel} style={{ marginTop: 8 }}>
-              <input type="checkbox" checked={opts.allowTempDob}
-                onChange={e => setOpts(o => ({ ...o, allowTempDob: e.target.checked }))} />
-              Enable temporary date of birth overrides
-            </label>
+
+          <div className={styles.noteBlock}>
+            <strong>NOTES</strong>
+            <p>* Upon setting Suspend App to "Yes", users are provided with a message when they attempt to use the app, and are prevented from playing the app.</p>
           </div>
         </div>
         <div style={{ marginTop: 20 }}>
@@ -529,12 +727,22 @@ function OptionsTab() {
 function AdminsTab() {
   const [admins, setAdmins] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', role: 'Admin' });
+  const [form, setForm] = useState({ name: '', firstName: '', lastName: '', employeeNumber: '', badgeNumber: '', jobTitle: '', department: '', phone: '', email: '', role: 'Admin', level: '1' });
+  const [filters, setFilters] = useState({ lastName: '', firstName: '', employeeNumber: '', badgeNumber: '' });
+  const [appliedFilters, setAppliedFilters] = useState({ lastName: '', firstName: '', employeeNumber: '', badgeNumber: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl('/api/admin/admins')).then(r => r.json()).then(d => setAdmins(d.admins || []));
   }, []);
+
+  const filteredAdmins = admins.filter((admin) => {
+    if (appliedFilters.lastName && !(admin.lastName || '').toLowerCase().includes(appliedFilters.lastName.toLowerCase())) return false;
+    if (appliedFilters.firstName && !(admin.firstName || '').toLowerCase().includes(appliedFilters.firstName.toLowerCase())) return false;
+    if (appliedFilters.employeeNumber && !(admin.employeeNumber || '').includes(appliedFilters.employeeNumber)) return false;
+    if (appliedFilters.badgeNumber && !(admin.badgeNumber || '').includes(appliedFilters.badgeNumber)) return false;
+    return true;
+  });
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -545,7 +753,7 @@ function AdminsTab() {
       });
       const admin = await res.json();
       setAdmins(prev => [...prev, admin]);
-      setForm({ name: '', email: '', role: 'Admin' });
+      setForm({ name: '', firstName: '', lastName: '', employeeNumber: '', badgeNumber: '', jobTitle: '', department: '', phone: '', email: '', role: 'Admin', level: '1' });
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -560,9 +768,45 @@ function AdminsTab() {
   return (
     <div>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Administrators</h2>
-        <button className={styles.btnPrimary} onClick={() => setShowForm(v => !v)}>+ Add Admin</button>
+        <h2 className={styles.sectionTitle}>NQ Birthday Wheel: Admins</h2>
+        <button className={styles.btnPrimary} onClick={() => setShowForm(v => !v)}>+ New Admin</button>
       </div>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Last Name</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.lastName} onChange={e => setFilters(f => ({ ...f, lastName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.lastName} onClick={() => setFilters(f => ({ ...f, lastName: '' }))}>CLEAR</button>
+          </div>
+        </div>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>First Name</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.firstName} onChange={e => setFilters(f => ({ ...f, firstName: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.firstName} onClick={() => setFilters(f => ({ ...f, firstName: '' }))}>CLEAR</button>
+          </div>
+        </div>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Employee #</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.employeeNumber} onChange={e => setFilters(f => ({ ...f, employeeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.employeeNumber} onClick={() => setFilters(f => ({ ...f, employeeNumber: '' }))}>CLEAR</button>
+          </div>
+        </div>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Badge #</label>
+          <div className={styles.filterInputRow}>
+            <input className={styles.filterInput} value={filters.badgeNumber} onChange={e => setFilters(f => ({ ...f, badgeNumber: e.target.value }))} />
+            <button type="button" className={styles.clearTiny} disabled={!filters.badgeNumber} onClick={() => setFilters(f => ({ ...f, badgeNumber: '' }))}>CLEAR</button>
+          </div>
+        </div>
+        <div className={styles.filterActions}>
+          <button className={styles.btnPrimary} onClick={() => setAppliedFilters({ ...filters })}>Search</button>
+        </div>
+      </div>
+
+      <p className={styles.resultCount}>({filteredAdmins.length} admins found)</p>
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleAdd}>
@@ -573,17 +817,52 @@ function AdminsTab() {
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Last Name</label>
+              <input className={styles.formInput} value={form.lastName}
+                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>First Name</label>
+              <input className={styles.formInput} value={form.firstName}
+                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Employee #</label>
+              <input className={styles.formInput} value={form.employeeNumber}
+                onChange={e => setForm(f => ({ ...f, employeeNumber: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Badge #</label>
+              <input className={styles.formInput} value={form.badgeNumber}
+                onChange={e => setForm(f => ({ ...f, badgeNumber: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Job Title</label>
+              <input className={styles.formInput} value={form.jobTitle}
+                onChange={e => setForm(f => ({ ...f, jobTitle: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Department</label>
+              <input className={styles.formInput} value={form.department}
+                onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Phone</label>
+              <input className={styles.formInput} value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
               <label className={styles.formLabel}>Email *</label>
               <input required type="email" className={styles.formInput} value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Role</label>
-              <select className={styles.formInput} value={form.role}
-                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                <option>Admin</option>
-                <option>Super Admin</option>
-                <option>Read Only</option>
+              <label className={styles.formLabel}>Level</label>
+              <select className={styles.formInput} value={form.level}
+                onChange={e => setForm(f => ({ ...f, level: e.target.value }))}>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
               </select>
             </div>
           </div>
@@ -597,18 +876,20 @@ function AdminsTab() {
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Actions</th></tr>
+            <tr><th>Name</th><th>Employee # / Badge #</th><th>Job Title / Department</th><th>Phone #</th><th>Email</th><th>Level</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {admins.length === 0 && (
-              <tr><td colSpan={5} className={styles.emptyState}>No administrators added.</td></tr>
+            {filteredAdmins.length === 0 && (
+              <tr><td colSpan={7} className={styles.emptyState}>No administrators added.</td></tr>
             )}
-            {admins.map(a => (
+            {filteredAdmins.map(a => (
               <tr key={a.id}>
                 <td>{a.name}</td>
+                <td className={styles.compactCell}>{a.employeeNumber || '—'}<br /><span className={styles.mutedSmall}>{a.badgeNumber || '—'}</span></td>
+                <td className={styles.compactCell}>{a.jobTitle || '—'}<br /><span className={styles.mutedSmall}>{a.department || '—'}</span></td>
+                <td>{a.phone || '—'}</td>
                 <td>{a.email}</td>
-                <td><span className={styles.statusBadge} style={{ background: '#d4edda', color: '#1a6630' }}>{a.role}</span></td>
-                <td>{formatDate(a.createdAt)}</td>
+                <td><span className={styles.levelPill}>{a.level || '1'}</span></td>
                 <td><button className={styles.btnDanger} onClick={() => handleDelete(a.id)}>Remove</button></td>
               </tr>
             ))}
@@ -619,65 +900,164 @@ function AdminsTab() {
   );
 }
 
+// ── Admin Login Screen ────────────────────────────────────────────────────────
+function AdminLogin({ onSuccess }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Invalid credentials.');
+        return;
+      }
+      onSuccess(data.name);
+    } catch {
+      setError('Unable to connect. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={styles.loginScreen}>
+      {/* Sidebar */}
+      <aside className={styles.loginSidebar}>
+        <div className={styles.loginSidebarLogo}>
+          <span className={styles.loginSidebarLogoIcon}><SidebarLogoIcon /></span>
+          <span className={styles.loginSidebarLogoText}>Birthday Wheel</span>
+        </div>
+        <div className={styles.loginSidebarItem}>
+          <span className={styles.loginSidebarItemIcon}><AdminShieldIcon /></span>
+          <span>Admin</span>
+        </div>
+      </aside>
+
+      {/* Workspace */}
+      <div className={styles.loginWorkspace}>
+        <header className={styles.loginTopbar}>
+          <h1>Birthday Wheel Admin</h1>
+          <span className={styles.loginBadge}>KTEA</span>
+        </header>
+
+        <main className={styles.loginCanvas}>
+          <div className={styles.loginCard}>
+            <p className={styles.loginLabel}>Admin Access</p>
+            <h2 className={styles.loginTitle}>Admin Sign In</h2>
+            <p className={styles.loginSubtitle}>Enter your admin credentials to access the dashboard.</p>
+
+            {error && <div className={styles.loginError}>{error}</div>}
+
+            <form onSubmit={handleSubmit} autoComplete="off">
+              <label className={styles.loginFieldLabel} htmlFor="admin-username">Username</label>
+              <input
+                id="admin-username"
+                className={styles.loginInput}
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                disabled={loading}
+                autoFocus
+                placeholder="admin"
+              />
+
+              <label className={styles.loginFieldLabel} htmlFor="admin-password">Password</label>
+              <input
+                id="admin-password"
+                className={styles.loginInput}
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+              />
+
+              <button
+                className={styles.loginBtn}
+                type="submit"
+                disabled={loading || !username.trim() || !password.trim()}
+              >
+                {loading ? 'Signing in…' : 'Sign In to Admin'}
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Admin Page ───────────────────────────────────────────────────────────
 export default function AdminPage() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [adminName, setAdminName] = useState('');
   const [activeTab, setActiveTab] = useState('Winners');
 
-  const NAV = [
-    { label: 'Birthday\nWheel', icon: '🎡' },
-    { label: 'Winners', icon: '🏆' },
-    { label: 'Prizes', icon: '🎁' },
-    { label: 'Reports', icon: '📊' },
-  ];
+  useEffect(() => {
+    const saved = sessionStorage.getItem('adminAuthed');
+    if (saved) { setAdminName(saved); setLoggedIn(true); }
+  }, []);
+
+  if (!loggedIn) {
+    return <AdminLogin onSuccess={(name) => { setAdminName(name); setLoggedIn(true); }} />;
+  }
 
   return (
     <div className={styles.screen}>
-      {/* Sidebar */}
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>Birthday Wheel</div>
-        {NAV.map(n => (
-          <div key={n.label} className={`${styles.navItem} ${n.label === 'Winners' && activeTab === 'Winners' ? styles.navItemActive : ''}`}>
-            <span className={styles.navIcon}>{n.icon}</span>
-            <span>{n.label.replace('\n', ' ')}</span>
-          </div>
-        ))}
-      </aside>
+      <header className={styles.topbar}>
+        <div className={styles.topbarLeft}>
+          <h1 className={styles.topbarTitle}>Birthday Wheel Admin</h1>
+          <span className={styles.topbarBadge}>KTEA</span>
+        </div>
+        <div className={styles.topbarRight}>
+          <span className={styles.topbarUser}>👤 {adminName}</span>
+          <button
+            className={styles.signOutBtn}
+            onClick={() => { sessionStorage.removeItem('adminAuthed'); setLoggedIn(false); setAdminName(''); }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </header>
 
-      {/* Main workspace */}
-      <div className={styles.workspace}>
-        {/* Top bar */}
-        <header className={styles.topbar}>
-          <div className={styles.topbarLeft}>
-            <h1 className={styles.topbarTitle}>Birthday Wheel Admin</h1>
-            <span className={styles.topbarBadge}>KTEA</span>
-          </div>
-          <div className={styles.topbarRight}>
-            <span className={styles.topbarUser}>Admin</span>
-          </div>
-        </header>
+      <div className={styles.adminBody}>
+        <aside className={styles.sidebar}>
+          {TABS.map(tab => {
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                className={`${styles.sideItem} ${activeTab === tab.id ? styles.sideItemActive : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className={styles.sideIcon}><TabIcon /></span>
+                <span className={styles.sideLabel}>{tab.label}</span>
+              </button>
+            );
+          })}
+        </aside>
 
-        {/* Tab bar */}
-        <nav className={styles.tabBar}>
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
-
-        {/* Content */}
-        <main className={styles.content}>
-          {activeTab === 'Winners' && <WinnersTab />}
-          {activeTab === 'Temporary DOBs' && <TempDobsTab />}
-          {activeTab === 'Prizes' && <PrizesTab />}
-          {activeTab === 'Birthday Months' && <BirthdayMonthsTab />}
-          {activeTab === 'Options' && <OptionsTab />}
-          {activeTab === 'Admins' && <AdminsTab />}
-        </main>
+        <div className={styles.workspace}>
+          <main className={styles.content}>
+            {activeTab === 'Winners' && <WinnersTab />}
+            {activeTab === 'Temporary DOBs' && <TempDobsTab />}
+            {activeTab === 'Prizes' && <PrizesTab />}
+            {activeTab === 'Birthday Months' && <BirthdayMonthsTab />}
+            {activeTab === 'Options' && <OptionsTab />}
+            {activeTab === 'Admins' && <AdminsTab />}
+          </main>
+        </div>
       </div>
     </div>
   );
