@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: birthday-wheel-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: FRONTEND_URL
+        sync: false
